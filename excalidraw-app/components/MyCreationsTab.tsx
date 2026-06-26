@@ -8,6 +8,8 @@ import {
   FreedrawIcon,
   LoadIcon,
   TrashIcon,
+  share,
+  copyIcon,
 } from "@excalidraw/excalidraw/components/icons";
 
 import { timeAgo } from "../utils/time";
@@ -27,6 +29,9 @@ interface MyCreationsTabProps {
   canvases: readonly CanvasMetadata[];
   onCanvasSelect: (id: string) => void;
   onCanvasDelete: (id: string) => void;
+  onCanvasShare: (id: string) => Promise<string | null>;
+  onCanvasUnshare: (id: string) => Promise<void>;
+  canShare: boolean;
   currentCanvasId: string | null;
 }
 
@@ -34,11 +39,54 @@ export const MyCreationsTab: React.FC<MyCreationsTabProps> = ({
   canvases,
   onCanvasSelect,
   onCanvasDelete,
+  onCanvasShare,
+  onCanvasUnshare,
+  canShare,
   currentCanvasId,
 }) => {
   const [user] = useAtom(userAtom);
   const setCreateCanvasDialog = useSetAtom(createCanvasDialogAtom);
   const setRenameCanvasDialog = useSetAtom(renameCanvasDialogAtom);
+
+  // The share link to surface inline after a successful publish, plus a
+  // transient "copied" acknowledgement keyed by canvas id.
+  const [sharedLink, setSharedLink] = React.useState<{
+    id: string;
+    url: string;
+  } | null>(null);
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+  const [pendingId, setPendingId] = React.useState<string | null>(null);
+
+  const copyToClipboard = async (id: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      window.setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // Clipboard may be unavailable (e.g. non-secure context); the link is
+      // still shown inline for manual copying.
+    }
+  };
+
+  const handleShareToggle = async (canvas: CanvasMetadata) => {
+    setPendingId(canvas.id);
+    try {
+      if (canvas.public) {
+        await onCanvasUnshare(canvas.id);
+        if (sharedLink?.id === canvas.id) {
+          setSharedLink(null);
+        }
+      } else {
+        const url = await onCanvasShare(canvas.id);
+        if (url) {
+          setSharedLink({ id: canvas.id, url });
+          await copyToClipboard(canvas.id, url);
+        }
+      }
+    } finally {
+      setPendingId(null);
+    }
+  };
 
   const sortedCanvases = [...canvases].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -82,19 +130,44 @@ export const MyCreationsTab: React.FC<MyCreationsTabProps> = ({
                 />
               ) : (
                 <div className="my-creations-tab__card-thumbnail--placeholder">
-                  空空如也
+                  No preview
                 </div>
               )}
               <div className="my-creations-tab__card-info">
                 <div className="my-creations-tab__card-details">
                   <span className="my-creations-tab__card-name">
                     {canvas.name}
+                    {canvas.public && (
+                      <span
+                        className="my-creations-tab__card-badge"
+                        title="Shared publicly (view-only)"
+                      >
+                        Shared
+                      </span>
+                    )}
                   </span>
                   <span className="my-creations-tab__card-date">
                     {timeAgo(canvas.updatedAt)}
                   </span>
                 </div>
                 <div className="my-creations-tab__card-actions">
+                  {canShare && (
+                    <button
+                      className={clsx("my-creations-tab__card-share", {
+                        "my-creations-tab__card-share--active": canvas.public,
+                      })}
+                      title={
+                        canvas.public ? "Stop sharing" : "Share view-only link"
+                      }
+                      disabled={pendingId === canvas.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShareToggle(canvas);
+                      }}
+                    >
+                      {share}
+                    </button>
+                  )}
                   <button
                     className="my-creations-tab__card-rename"
                     title="Rename canvas"
@@ -121,6 +194,28 @@ export const MyCreationsTab: React.FC<MyCreationsTabProps> = ({
                   </button>
                 </div>
               </div>
+              {sharedLink?.id === canvas.id && (
+                <div
+                  className="my-creations-tab__card-share-link"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="text"
+                    readOnly
+                    value={sharedLink.url}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    title="Copy link"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyToClipboard(canvas.id, sharedLink.url);
+                    }}
+                  >
+                    {copiedId === canvas.id ? "Copied!" : copyIcon}
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}

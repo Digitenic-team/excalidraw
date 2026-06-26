@@ -26,6 +26,28 @@ const getAuthHeaders = () => {
   return headers;
 };
 
+/**
+ * Loads a publicly shared canvas by its share token. Unauthenticated: no auth
+ * headers are sent, mirroring the unprotected backend `/api/v2/public/{id}` route.
+ * Returns null if the share link is unknown or no longer published.
+ */
+export const loadPublicCanvas = async (
+  shareId: string,
+): Promise<CanvasData | null> => {
+  const response = await fetch(`/api/v2/public/${shareId}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`Failed to load shared canvas: ${response.statusText}`);
+  }
+  const rawData = await response.json();
+  return hydrateCanvasData(rawData);
+};
+
 export class BackendStorageAdapter implements IStorageAdapter {
   async listCanvases(): Promise<CanvasMetadata[]> {
     const response = await fetch(API_BASE_URL, {
@@ -134,6 +156,33 @@ export class BackendStorageAdapter implements IStorageAdapter {
         throw new AuthError("User is not authenticated");
       }
       throw new Error(`Failed to delete canvas: ${response.statusText}`);
+    }
+  }
+
+  async publishCanvas(id: string): Promise<{ shareId: string }> {
+    const response = await fetch(`${API_BASE_URL}/${id}/publish`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new AuthError("User is not authenticated");
+      }
+      throw new Error(`Failed to publish canvas: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async unpublishCanvas(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/${id}/publish`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new AuthError("User is not authenticated");
+      }
+      throw new Error(`Failed to unpublish canvas: ${response.statusText}`);
     }
   }
 
