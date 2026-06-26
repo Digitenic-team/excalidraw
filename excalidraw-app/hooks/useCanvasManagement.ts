@@ -98,7 +98,7 @@ export const useCanvasManagement = ({
           await refreshCanvases();
         } catch (error: any) {
           if (error instanceof AuthError) {
-            setErrorMessage("您需要登录才能删除此画布。");
+            setErrorMessage("You need to be logged in to delete this canvas.");
           } else {
             setErrorMessage("Could not delete the canvas.");
           }
@@ -137,7 +137,7 @@ export const useCanvasManagement = ({
         setCurrentCanvasId(createdCanvas.id);
       } catch (error: any) {
         if (error instanceof AuthError) {
-          setErrorMessage("您需要登录才能创建新画布。");
+          setErrorMessage("You need to be logged in to create a new canvas.");
         } else {
           setErrorMessage("Could not create new canvas.");
         }
@@ -162,7 +162,7 @@ export const useCanvasManagement = ({
         }
       } catch (error: any) {
         if (error instanceof AuthError) {
-          setErrorMessage("您需要登录才能重命名此画布。");
+          setErrorMessage("You need to be logged in to rename this canvas.");
         } else {
           setErrorMessage("Could not rename the canvas.");
         }
@@ -200,7 +200,7 @@ export const useCanvasManagement = ({
         setCurrentCanvasId(createdCanvas.id);
       } catch (error: any) {
         if (error instanceof AuthError) {
-          setErrorMessage("您需要登录才能另存为新画布。");
+          setErrorMessage("You need to be logged in to save as a new canvas.");
         } else {
           setErrorMessage("Could not save as new canvas.");
         }
@@ -215,6 +215,48 @@ export const useCanvasManagement = ({
     ],
   );
 
+  const handleCanvasShare = useCallback(
+    async (id: string): Promise<string | null> => {
+      if (!storageAdapter.publishCanvas) {
+        return null;
+      }
+      try {
+        const { shareId } = await storageAdapter.publishCanvas(id);
+        await refreshCanvases();
+        return `${window.location.origin}/#view=${shareId}`;
+      } catch (error: any) {
+        if (error instanceof AuthError) {
+          setErrorMessage("You need to be logged in to share this canvas.");
+        } else {
+          setErrorMessage("Could not share the canvas.");
+        }
+        return null;
+      }
+    },
+    [storageAdapter, refreshCanvases, setErrorMessage],
+  );
+
+  const handleCanvasUnshare = useCallback(
+    async (id: string): Promise<void> => {
+      if (!storageAdapter.unpublishCanvas) {
+        return;
+      }
+      try {
+        await storageAdapter.unpublishCanvas(id);
+        await refreshCanvases();
+      } catch (error: any) {
+        if (error instanceof AuthError) {
+          setErrorMessage(
+            "You need to be logged in to stop sharing this canvas.",
+          );
+        } else {
+          setErrorMessage("Could not stop sharing the canvas.");
+        }
+      }
+    },
+    [storageAdapter, refreshCanvases, setErrorMessage],
+  );
+
   return {
     canvases,
     handleCanvasSelect,
@@ -222,6 +264,8 @@ export const useCanvasManagement = ({
     handleCanvasCreate,
     handleCanvasRename,
     handleCanvasSaveAs,
+    handleCanvasShare,
+    handleCanvasUnshare,
     refreshCanvases,
   };
 };

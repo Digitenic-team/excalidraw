@@ -111,7 +111,8 @@
   }
 
   &__card-rename,
-  &__card-delete {
+  &__card-delete,
+  &__card-share {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -130,6 +131,69 @@
 
     &:hover {
       background-color: var(--button-hover-bg);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  &__card-share--active {
+    color: var(--color-primary);
+  }
+
+  &__card-badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    line-height: 1.4;
+    border-radius: var(--border-radius-md);
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+    vertical-align: middle;
+  }
+
+  &__card-share-link {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.75rem 0.75rem;
+
+    input {
+      flex-grow: 1;
+      min-width: 0;
+      font-size: 0.7rem;
+      padding: 0.25rem 0.4rem;
+      border: 1px solid var(--button-border-color);
+      border-radius: var(--border-radius-md);
+      background-color: var(--input-bg-color, var(--island-bg-color));
+      color: var(--text-primary-color);
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--text-primary-lighter);
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 0.7rem;
+      border-radius: var(--border-radius-md);
+
+      svg {
+        width: 1rem;
+        height: 1rem;
+      }
+
+      &:hover {
+        background-color: var(--button-hover-bg);
+      }
     }
   }
 }

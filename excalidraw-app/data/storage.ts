@@ -15,6 +15,10 @@ export interface CanvasMetadata {
   createdAt: string;
   updatedAt: string;
   thumbnail?: string;
+  /** Whether the canvas is currently shared publicly (view-only). */
+  public?: boolean;
+  /** Stable public share token; present once the canvas has ever been published. */
+  shareId?: string;
 }
 
 /**
@@ -71,6 +75,20 @@ export interface IStorageAdapter {
    * @param newName The new name for the canvas.
    */
   renameCanvas(id: string, newName: string): Promise<void>;
+
+  /**
+   * Makes a canvas publicly viewable (view-only) and returns its stable share
+   * token. Optional: only backends that can serve logged-out viewers implement
+   * this (i.e. the default server-backed storage, not browser-direct BYOC).
+   * @param id The unique identifier of the canvas to publish.
+   */
+  publishCanvas?(id: string): Promise<{ shareId: string }>;
+
+  /**
+   * Stops public sharing of a canvas. Optional; see {@link publishCanvas}.
+   * @param id The unique identifier of the canvas to unpublish.
+   */
+  unpublishCanvas?(id: string): Promise<void>;
 }
 
 /**

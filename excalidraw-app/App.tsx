@@ -116,6 +116,7 @@ import {
   exportToExcalidrawPlus,
 } from "./components/ExportToExcalidrawPlus";
 import { TopErrorBoundary } from "./components/TopErrorBoundary";
+import { ViewOnlyShare, getViewOnlyShareId } from "./components/ViewOnlyShare";
 
 import { useAuth } from "./hooks/useAuth";
 import { useCanvasManagement } from "./hooks/useCanvasManagement";
@@ -442,6 +443,8 @@ const ExcalidrawWrapper = () => {
     handleCanvasCreate,
     handleCanvasRename,
     handleCanvasSaveAs,
+    handleCanvasShare,
+    handleCanvasUnshare,
     refreshCanvases,
   } = useCanvasManagement({
     storageAdapter,
@@ -1239,6 +1242,9 @@ const ExcalidrawWrapper = () => {
               canvases={canvases}
               onCanvasSelect={handleCanvasSelect}
               onCanvasDelete={handleCanvasDelete}
+              onCanvasShare={handleCanvasShare}
+              onCanvasUnshare={handleCanvasUnshare}
+              canShare={storageConfig.type === "default"}
               currentCanvasId={currentCanvasId}
             />
           </Sidebar>
@@ -1567,6 +1573,17 @@ const ExcalidrawApp = () => {
     window.location.pathname === "/excalidraw-plus-export";
   if (isCloudExportWindow) {
     return <ExcalidrawPlusIframeExport />;
+  }
+
+  // Public, read-only share links (`#view=<token>`) render a stripped-down
+  // viewer with no collaboration, autosave, storage or account chrome.
+  const viewOnlyShareId = getViewOnlyShareId();
+  if (viewOnlyShareId) {
+    return (
+      <TopErrorBoundary>
+        <ViewOnlyShare shareId={viewOnlyShareId} />
+      </TopErrorBoundary>
+    );
   }
 
   return (
