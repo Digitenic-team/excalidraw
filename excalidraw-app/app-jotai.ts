@@ -84,13 +84,57 @@ const STORAGE_CONFIG_LOCAL_STORAGE_KEY = "excalidraw-storage-config-type";
 const STORAGE_CONFIG_SESSION_STORAGE_KEY =
   "excalidraw-storage-config-credentials";
 
+// Deploy-time data-source lock
+// -----------------------------------------------------------------------------
+// The Go server injects window.__EXCALIDRAW_CONFIG__ into index.html when the
+// deployment sets a storage backend. When present, the data source is chosen by
+// the deployment team (not the user): authenticated users use `authenticated`,
+// logged-out users use `anonymous`. The user-facing settings menu is hidden.
+
+interface LockedStorageConfig {
+  authenticated: StorageType;
+  anonymous: StorageType;
+}
+
+const VALID_STORAGE_TYPES: StorageType[] = [
+  "default",
+  "indexed-db",
+  "kv",
+  "s3",
+];
+
+export const getLockedStorageConfig = (): LockedStorageConfig | null => {
+  const raw = (window as any).__EXCALIDRAW_CONFIG__;
+  if (!raw) {
+    return null;
+  }
+  const isValid = (v: unknown): v is StorageType =>
+    typeof v === "string" && VALID_STORAGE_TYPES.includes(v as StorageType);
+  if (!isValid(raw.storageBackendAuthenticated)) {
+    return null;
+  }
+  return {
+    authenticated: raw.storageBackendAuthenticated,
+    anonymous: isValid(raw.storageBackendAnonymous)
+      ? raw.storageBackendAnonymous
+      : "indexed-db",
+  };
+};
+
+export const isStorageBackendLocked = (): boolean =>
+  getLockedStorageConfig() !== null;
+
 const getInitialStorageConfig = (): StorageConfig => {
   const defaultConfig: StorageConfig = { type: "indexed-db" };
+
+  // When the deployment locks the data source, ignore the user's persisted
+  // choice and seed from the authenticated backend (App.tsx narrows by user).
+  const locked = getLockedStorageConfig();
+  if (locked) {
+    return { type: locked.authenticated };
+  }
+
   try {
-    const _prevConfig = localStorage.getItem(STORAGE_CONFIG_LOCAL_STORAGE_KEY);
-    const defaultConfig: StorageConfig = _prevConfig
-      ? JSON.parse(_prevConfig)
-      : { type: "indexed-db" };
     const nonSensitive = localStorage.getItem(STORAGE_CONFIG_LOCAL_STORAGE_KEY);
     const sensitive = sessionStorage.getItem(
       STORAGE_CONFIG_SESSION_STORAGE_KEY,

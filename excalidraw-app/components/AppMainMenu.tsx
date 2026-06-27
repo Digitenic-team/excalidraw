@@ -11,7 +11,13 @@ import DropdownMenuItemLink from "@excalidraw/excalidraw/components/dropdownMenu
 
 import type { Theme } from "@excalidraw/element/types";
 
-import { useAtom, useSetAtom, userAtom, saveAsDialogAtom } from "../app-jotai";
+import {
+  useAtom,
+  useSetAtom,
+  userAtom,
+  saveAsDialogAtom,
+  isStorageBackendLocked,
+} from "../app-jotai";
 import { LanguageList } from "../app-language/LanguageList";
 
 export const AppMainMenu: React.FC<{
@@ -57,13 +63,18 @@ export const AppMainMenu: React.FC<{
       <MainMenu.DefaultItems.SearchMenu />
       <MainMenu.DefaultItems.Help />
       <MainMenu.DefaultItems.ClearCanvas />
-      <MainMenu.Separator />
-      <MainMenu.Item
-        onSelect={props.onStorageSettingsClick}
-        icon={extraToolsIcon}
-      >
-        Data Source Settings...
-      </MainMenu.Item>
+      {/* Hidden when the deployment locks the data source (set via env vars). */}
+      {!isStorageBackendLocked() && (
+        <>
+          <MainMenu.Separator />
+          <MainMenu.Item
+            onSelect={props.onStorageSettingsClick}
+            icon={extraToolsIcon}
+          >
+            Data Source Settings...
+          </MainMenu.Item>
+        </>
+      )}
       <MainMenu.Separator />
       {user ? (
         <div

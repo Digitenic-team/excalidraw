@@ -92,6 +92,7 @@ import {
   useAtomWithInitialValue,
   appJotaiStore,
   storageConfigAtom,
+  getLockedStorageConfig,
   currentCanvasIdAtom,
   createCanvasDialogAtom,
   renameCanvasDialogAtom,
@@ -399,11 +400,21 @@ const ExcalidrawWrapper = () => {
   }, []);
 
   const storageAdapter: IStorageAdapter = useMemo(() => {
-    if (storageConfig.type === "default" && user) {
+    // When the deployment locks the data source, the backend is chosen by env,
+    // not the user: authenticated users use `authenticated`, logged-out users
+    // use `anonymous` (typically IndexedDB).
+    const locked = getLockedStorageConfig();
+    const effectiveType = locked
+      ? user
+        ? locked.authenticated
+        : locked.anonymous
+      : storageConfig.type;
+
+    if (effectiveType === "default" && user) {
       return new BackendStorageAdapter();
     }
     if (
-      storageConfig.type === "kv" &&
+      effectiveType === "kv" &&
       storageConfig.kvUrl &&
       storageConfig.kvApiToken
     ) {
@@ -413,7 +424,7 @@ const ExcalidrawWrapper = () => {
       });
     }
     if (
-      storageConfig.type === "s3" &&
+      effectiveType === "s3" &&
       storageConfig.s3AccessKeyId &&
       storageConfig.s3SecretAccessKey &&
       storageConfig.s3Region &&
