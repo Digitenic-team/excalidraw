@@ -381,7 +381,7 @@ const ExcalidrawWrapper = () => {
   const isCollabDisabled = isRunningInIframe();
 
   const setUser = useSetAtom(userAtom);
-  useAuth(setUser);
+  useAuth(setUser, setErrorMessage);
   const user = useAtomValue(userAtom);
   const storageConfig = useAtomValue(storageConfigAtom);
   const currentCanvasId = useAtomValue(currentCanvasIdAtom);
